@@ -1,3 +1,4 @@
+/* File: src/App.tsx */
 import React, { useState, useEffect } from "react";
 import {
   Beer,
@@ -9,6 +10,8 @@ import {
   AlertTriangle,
   History,
   RotateCcw,
+  // Cocktail,
+  Martini,
 } from "lucide-react";
 import { DrinkInfo, UserInfo, BACResult, SavedDrink } from "./types";
 import { calculateBAC } from "./utils/bacCalculator";
@@ -42,23 +45,72 @@ function App() {
   });
 
   const [result, setResult] = useState<BACResult | null>(null);
+
   const [savedDrinks, setSavedDrinks] = useState<SavedDrink[]>(() => {
     const saved = localStorage.getItem("savedDrinks");
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Prépare l'heure par défaut (arrondie au quart d'heure précédent)
   const defaultTime = roundToNearest15Minutes(new Date());
   const [selectedTime, setSelectedTime] = useState(defaultTime);
 
+  // Boisson en cours de saisie
   const [newDrink, setNewDrink] = useState({
     name: "",
     amount: "",
     alcoholPercentage: "",
   });
 
+  // Options pour les dropdowns de l'heure
   const timeOptions = generateTimeOptions();
+
+  // Timeline du BAC pour le graphique
   const [timeline, setTimeline] = useState<{ time: Date; bac: number }[]>([]);
 
+  /**
+   * Boissons standards, juste pour pré-remplir le formulaire.
+   * Les volumes et degrés d'alcool sont approximatifs, vous pouvez ajuster.
+   */
+  const standardDrinks = [
+    {
+      id: "beer",
+      label: "Bière",
+      icon: <Beer className="w-8 h-8 text-amber-500 mb-2" />,
+      amount: 250,
+      alcoholPercentage: 5,
+    },
+    {
+      id: "wine",
+      label: "Vin",
+      icon: <Wine className="w-8 h-8 text-red-500 mb-2" />,
+      amount: 125,
+      alcoholPercentage: 12,
+    },
+    {
+      id: "shot",
+      label: "Shot",
+      icon: <GlassWater className="w-8 h-8 text-purple-500 mb-2" />,
+      amount: 25,
+      alcoholPercentage: 40,
+    },
+    {
+      id: "cocktail",
+      label: "Cocktail",
+      icon: <Martini className="w-8 h-8 text-green-500 mb-2" />,
+      amount: 200,
+      alcoholPercentage: 12,
+    },
+    {
+      id: "pastis",
+      label: "Pastis",
+      icon: <GlassWater className="w-8 h-8 text-yellow-400 mb-2" />,
+      amount: 25,
+      alcoholPercentage: 45,
+    },
+  ];
+
+  // Sauvegarde dans localStorage à chaque fois que userInfo, drinks ou savedDrinks changent
   useEffect(() => {
     localStorage.setItem("userInfo", JSON.stringify(userInfo));
   }, [userInfo]);
@@ -71,6 +123,7 @@ function App() {
     localStorage.setItem("savedDrinks", JSON.stringify(savedDrinks));
   }, [savedDrinks]);
 
+  // Recalcule le BAC à chaque fois qu'on modifie la liste de boissons ou l'utilisateur
   useEffect(() => {
     if (drinks.length > 0) {
       const result = calculateBAC(drinks, userInfo);
@@ -82,67 +135,98 @@ function App() {
     }
   }, [drinks, userInfo]);
 
-  const addCustomDrink = () => {
+  /**
+   * Pré-remplit le formulaire avec une boisson standard.
+   * Ne l'ajoute pas directement à la liste.
+   */
+  const prefillDrinkForm = (drinkId: string) => {
+    const found = standardDrinks.find((d) => d.id === drinkId);
+    if (!found) return;
+
+    setNewDrink({
+      name: found.label,
+      amount: String(found.amount),
+      alcoholPercentage: String(found.alcoholPercentage),
+    });
+
+    // Met l'heure sélectionnée à 30 minutes après la dernière boisson
+    const lastDrink = drinks[drinks.length - 1];
+    let newTime;
+
+    if (lastDrink) {
+      const lastTime = new Date(lastDrink.timestamp);
+      newTime = new Date(lastTime.getTime() + 30 * 60 * 1000);
+    } else {
+      newTime = new Date();
+    }
+
+    const roundedTime = roundToNearest15Minutes(newTime);
+    setSelectedTime(roundedTime);
+  };
+
+  /**
+   * Ajoute la boisson actuellement dans le formulaire
+   * à la liste des boissons consommées + historique
+   */
+  const addDrink = () => {
     if (Number(newDrink.amount) > 0 && Number(newDrink.alcoholPercentage) > 0) {
       const timestamp = normalizeTime(selectedTime.hours, selectedTime.minutes);
 
+      // On crée un objet pour l'historique (si on veut le sauvegarder)
       const drinkToSave: SavedDrink = {
         id: Date.now().toString(),
         name: newDrink.name || `Boisson ${newDrink.alcoholPercentage}%`,
         amount: Number(newDrink.amount),
         alcoholPercentage: Number(newDrink.alcoholPercentage),
       };
-      setSavedDrinks((prev) => [...prev, drinkToSave]);
-      addDrinkToList({
-        ...drinkToSave,
+
+      // Vérifie si la boisson existe déjà dans les savedDrinks
+      const isDuplicate = savedDrinks.some(
+        (drink) =>
+          drink.name === drinkToSave.name &&
+          drink.amount === drinkToSave.amount &&
+          drink.alcoholPercentage === drinkToSave.alcoholPercentage
+      );
+
+      // Si ce n'est pas un duplicata, on ajoute la boisson dans les savedDrinks
+      if (!isDuplicate) {
+        setSavedDrinks((prev) => [...prev, drinkToSave]);
+      }
+
+      // On ajoute aussi cette boisson à la liste "drinks" consommées
+      const drinkForList: DrinkInfo = {
+        id: Date.now().toString(),
+        name: drinkToSave.name,
+        amount: drinkToSave.amount,
+        alcoholPercentage: drinkToSave.alcoholPercentage,
         timestamp,
-      });
+      };
+      setDrinks((prev) => [...prev, drinkForList]);
+
+      // On réinitialise le formulaire
       setNewDrink({
         name: "",
         amount: "",
         alcoholPercentage: "",
       });
+
+      // Met l'heure sélectionnée à 30 minutes après la dernière boisson
+      const newTime = new Date(timestamp.getTime() + 30 * 60 * 1000);
+      setSelectedTime(roundToNearest15Minutes(newTime));
     }
   };
 
-  const addPresetDrink = (type: "beer" | "wine" | "shot") => {
-    const drinkTypes = {
-      beer: { name: "Bière", amount: 250, alcoholPercentage: 5 },
-      wine: { name: "Vin", amount: 125, alcoholPercentage: 12 },
-      shot: { name: "Shot", amount: 25, alcoholPercentage: 40 },
-    };
-
-    const timestamp = normalizeTime(selectedTime.hours, selectedTime.minutes);
-    addDrinkToList({
-      ...drinkTypes[type],
-      timestamp,
-    });
-  };
-
-  const addDrinkToList = (drink: {
-    name: string;
-    amount: number;
-    alcoholPercentage: number;
-    timestamp: Date;
-  }) => {
-    const newDrink: DrinkInfo = {
-      id: Date.now().toString(),
-      name: drink.name,
-      amount: drink.amount,
-      alcoholPercentage: drink.alcoholPercentage,
-      timestamp: drink.timestamp,
-    };
-
-    setDrinks((prev) => [...prev, newDrink]);
-  };
-
+  /**
+   * Quand on ajoute une boisson depuis le 'savedDrinks'
+   * on pré-remplit le formulaire avec un décalage de 30 min par rapport à la dernière boisson consommée.
+   */
   const addSavedDrink = (drink: SavedDrink) => {
     const lastDrink = drinks[drinks.length - 1];
     let newTime;
 
     if (lastDrink) {
       const lastTime = new Date(lastDrink.timestamp);
-      newTime = new Date(lastTime.getTime() + 30 * 60000);
+      newTime = new Date(lastTime.getTime() + 30 * 60 * 1000);
     } else {
       newTime = new Date();
     }
@@ -156,14 +240,23 @@ function App() {
     });
   };
 
+  /**
+   * Supprime une boisson de la liste 'drinks'
+   */
   const removeDrink = (id: string) => {
     setDrinks(drinks.filter((drink) => drink.id !== id));
   };
 
+  /**
+   * Supprime une boisson du 'savedDrinks'
+   */
   const removeSavedDrink = (id: string) => {
     setSavedDrinks(savedDrinks.filter((drink) => drink.id !== id));
   };
 
+  /**
+   * Reset total
+   */
   const resetAll = () => {
     if (
       window.confirm(
@@ -183,6 +276,22 @@ function App() {
       });
       setResult(null);
       localStorage.clear();
+    }
+  };
+
+  const getTimeBelowLimit = (timeline: { time: Date; bac: number }[]) => {
+    const limit = 0.5;
+    const belowLimitEntry = timeline.find((entry) => entry.bac < limit);
+    return belowLimitEntry ? belowLimitEntry.time : null;
+  };
+
+  const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedGender = e.target.value;
+    if (selectedGender === "other") {
+      window.location.href =
+        "https://greatergood.berkeley.edu/article/item/seven_ways_to_find_your_purpose_in_life";
+    } else {
+      setUserInfo({ ...userInfo, gender: selectedGender as "male" | "female" });
     }
   };
 
@@ -212,11 +321,14 @@ function App() {
                   Poids (kg)
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   value={userInfo.weight}
-                  onChange={(e) =>
-                    setUserInfo({ ...userInfo, weight: Number(e.target.value) })
-                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (/^\d*$/.test(value)) {
+                      setUserInfo({ ...userInfo, weight: Number(value) });
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -227,26 +339,20 @@ function App() {
                 </label>
                 <select
                   value={userInfo.gender}
-                  onChange={(e) =>
-                    setUserInfo({
-                      ...userInfo,
-                      gender: e.target.value as "male" | "female",
-                    })
-                  }
+                  onChange={handleGenderChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="male">Homme</option>
                   <option value="female">Femme</option>
+                  <option value="other">Autre</option>
                 </select>
               </div>
             </div>
           </div>
 
-          {/* Ajouter une boisson personnalisée */}
+          {/* Ajouter une boisson */}
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">
-              Ajouter une boisson personnalisée
-            </h2>
+            <h2 className="text-xl font-semibold mb-4">Ajouter une boisson</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -338,7 +444,7 @@ function App() {
                 </div>
               </div>
               <button
-                onClick={addCustomDrink}
+                onClick={addDrink}
                 className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors"
               >
                 Ajouter
@@ -346,35 +452,25 @@ function App() {
             </div>
           </div>
 
-          {/* Boissons standards */}
+          {/* Boissons standards (préremplir le formulaire) */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">Boissons standards</h2>
             <div className="grid grid-cols-3 gap-4">
-              <button
-                onClick={() => addPresetDrink("beer")}
-                className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                <Beer className="w-8 h-8 text-amber-500 mb-2" />
-                <span className="text-sm">Bière</span>
-              </button>
-              <button
-                onClick={() => addPresetDrink("wine")}
-                className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                <Wine className="w-8 h-8 text-red-500 mb-2" />
-                <span className="text-sm">Vin</span>
-              </button>
-              <button
-                onClick={() => addPresetDrink("shot")}
-                className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors"
-              >
-                <GlassWater className="w-8 h-8 text-purple-500 mb-2" />
-                <span className="text-sm">Shot</span>
-              </button>
+              {standardDrinks.map((drink) => (
+                <button
+                  key={drink.id}
+                  onClick={() => prefillDrinkForm(drink.id)}
+                  className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  {drink.icon}
+                  <span className="text-sm">{drink.label}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
+        {/* Boissons sauvegardées + Boissons consommées */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {/* Boissons sauvegardées */}
           {savedDrinks.length > 0 && (
@@ -486,6 +582,15 @@ function App() {
                 </h2>
               </div>
               <p className="text-gray-700">{result.message}</p>
+              {timeline.length > 0 && (
+                <p className="text-gray-700 mt-2">
+                  Vous serez en-dessous de 0.5g/L à {/* @TODO: Fix that */}
+                  {getTimeBelowLimit(timeline)?.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              )}
             </div>
 
             <div className="bg-white rounded-xl shadow-md p-6">
