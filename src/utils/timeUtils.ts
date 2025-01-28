@@ -50,21 +50,24 @@ export function normalizeTime(hours: number, minutes: number): Date {
 }
 
 /**
- * Génére une timeline jusqu'à 48h en arrière + élimination progressive
- * avec un pas de 5 minutes, pour avoir plus de points et un affichage plus précis.
+ * Génére une timeline avec une fenêtre personnalisée,
+ * incluant les heures passées et futures.
  */
 export function generateBACTimeline(
   drinks: any[],
   userInfo: any,
-  hours = 48
+  pastHours = 8,
+  futureHours = 4,
+  stepMinutes = 5
 ): { time: Date; bac: number }[] {
   const now = new Date();
-  const startTime = new Date(now.getTime() - hours * 60 * 60 * 1000);
+  const startTime = new Date(now.getTime() - pastHours * 60 * 60 * 1000);
+  const endTime = new Date(now.getTime() + futureHours * 60 * 60 * 1000);
   const timeline: { time: Date; bac: number }[] = [];
 
-  // On calcule toutes les 5 minutes
-  const stepMinutes = 5;
-  const totalSteps = (hours * 60) / stepMinutes; // ex: 48h => 576 points
+  const totalSteps = ((pastHours + futureHours) * 60) / stepMinutes;
+
+  const r = userInfo.gender === "male" ? 0.68 : 0.55;
 
   for (let i = 0; i <= totalSteps; i++) {
     const time = new Date(startTime.getTime() + i * stepMinutes * 60 * 1000);
@@ -73,6 +76,7 @@ export function generateBACTimeline(
 
     drinks.forEach((drink) => {
       const drinkTime = new Date(drink.timestamp);
+
       if (drinkTime <= time) {
         const hoursSinceDrink =
           (time.getTime() - drinkTime.getTime()) / (1000 * 60 * 60);
@@ -81,11 +85,8 @@ export function generateBACTimeline(
         const alcoholGrams =
           ((drink.amount * drink.alcoholPercentage) / 100) * 0.789;
 
-        // Facteur de diffusion
-        const r = userInfo.gender === "male" ? 0.68 : 0.55;
-
-        // Taux d'élimination horaire
-        const eliminatedAlcohol = hoursSinceDrink * 0.015;
+        // Taux d'élimination horaire (corrigé à 0.15)
+        const eliminatedAlcohol = hoursSinceDrink * 0.15;
 
         // BAC résiduel de cette boisson
         const remainingBACFromDrink =
