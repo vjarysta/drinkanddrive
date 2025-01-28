@@ -356,6 +356,11 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
       <div className="max-w-7xl mx-auto p-6">
         <div className="text-center mb-8">
+          <img
+            src="logo.png"
+            alt="Drink & Drive Logo"
+            className="w-16 h-16 mx-auto mb-4"
+          />
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             Drink & Drive
           </h1>
