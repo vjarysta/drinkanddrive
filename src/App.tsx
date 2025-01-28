@@ -33,15 +33,23 @@ function App() {
         };
   });
 
-  const [drinks, setDrinks] = useState<DrinkInfo[]>(() => {
-    const saved = localStorage.getItem("drinks");
-    return saved
-      ? JSON.parse(saved).map((drink: any) => ({
+  const [drinks, setDrinks] = useState<DrinkInfo[]>(
+    (() => {
+      const saved = localStorage.getItem("drinks");
+      if (saved) {
+        const parsedDrinks = JSON.parse(saved).map((drink: any) => ({
           ...drink,
           timestamp: new Date(drink.timestamp),
-        }))
-      : [];
-  });
+        }));
+        // Filtrer les boissons consommées il y a moins de 24 heures
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        return parsedDrinks.filter(
+          (drink: DrinkInfo) => drink.timestamp >= twentyFourHoursAgo
+        );
+      }
+      return [];
+    })()
+  );
 
   const [result, setResult] = useState<BACResult | null>(null);
 
@@ -76,8 +84,8 @@ function App() {
       id: "beer",
       label: "Bière",
       icon: <Beer className="w-8 h-8 text-amber-500 mb-2" />,
-      amount: 250, // Revenus à la configuration initiale
-      alcoholPercentage: 5, // Revenus à la configuration initiale
+      amount: 500, // Mis à jour selon l'exemple de l'utilisateur
+      alcoholPercentage: 7, // Mis à jour selon l'exemple de l'utilisateur
     },
     {
       id: "wine",
@@ -322,9 +330,12 @@ function App() {
 
   // Trouve la première date dans la timeline où le BAC tombe à 0
   const getTimeAtZero = (data: { time: Date; bac: number }[]): Date | null => {
-    // Parcourir la timeline pour trouver le premier moment où BAC <= 0
+    let started = false;
     for (let i = 0; i < data.length; i++) {
-      if (data[i].bac <= 0) {
+      if (data[i].bac > 0) {
+        started = true;
+      }
+      if (started && data[i].bac <= 0) {
         return data[i].time;
       }
     }
@@ -349,7 +360,8 @@ function App() {
             Drink & Drive
           </h1>
           <p className="text-gray-600">
-            Calculez votre taux d'alcoolémie de manière responsable
+            Calculez votre taux d'alcoolémie. Boire et conduire ? Oui, mais de
+            manière responsable !
           </p>
         </div>
 
@@ -520,7 +532,7 @@ function App() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {/* Boissons sauvegardées */}
           {savedDrinks.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-6 h-48 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="bg-white rounded-xl shadow-md p-6 h-64 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <div className="flex items-center mb-4">
                 <History className="w-6 h-6 text-blue-500 mr-2" />
                 <h2 className="text-xl font-semibold">Boissons sauvegardées</h2>
@@ -560,7 +572,7 @@ function App() {
 
           {/* Liste des boissons consommées */}
           {drinks.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-6 h-48 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="bg-white rounded-xl shadow-md p-6 h-64 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <h2 className="text-xl font-semibold mb-4">
                 Boissons consommées
               </h2>
