@@ -76,8 +76,8 @@ function App() {
       id: "beer",
       label: "Bière",
       icon: <Beer className="w-8 h-8 text-amber-500 mb-2" />,
-      amount: 250,
-      alcoholPercentage: 5,
+      amount: 250, // Revenus à la configuration initiale
+      alcoholPercentage: 5, // Revenus à la configuration initiale
     },
     {
       id: "wine",
@@ -322,7 +322,13 @@ function App() {
 
   // Trouve la première date dans la timeline où le BAC tombe à 0
   const getTimeAtZero = (data: { time: Date; bac: number }[]): Date | null => {
-    return data.find((point) => point.bac === 0)?.time || null;
+    // Parcourir la timeline pour trouver le premier moment où BAC <= 0
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].bac <= 0) {
+        return data[i].time;
+      }
+    }
+    return null;
   };
 
   const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -514,7 +520,7 @@ function App() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {/* Boissons sauvegardées */}
           {savedDrinks.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="bg-white rounded-xl shadow-md p-6 h-48 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <div className="flex items-center mb-4">
                 <History className="w-6 h-6 text-blue-500 mr-2" />
                 <h2 className="text-xl font-semibold">Boissons sauvegardées</h2>
@@ -525,14 +531,12 @@ function App() {
                     key={drink.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                   >
-                    <div className="flex items-center">
-                      <GlassWater className="w-5 h-5 text-blue-500 mr-2" />
-                      <div>
-                        <span className="font-medium">{drink.name}</span>
-                        <span className="text-sm text-gray-500 ml-2">
-                          {drink.amount}ml ({drink.alcoholPercentage}%)
-                        </span>
-                      </div>
+                    <div className="flex items-center space-x-2">
+                      <GlassWater className="w-5 h-5 text-blue-500" />
+                      <span className="font-medium">
+                        {drink.name} - {drink.amount}ml (
+                        {drink.alcoholPercentage}%)
+                      </span>
                     </div>
                     <div className="flex space-x-2">
                       <button
@@ -556,7 +560,7 @@ function App() {
 
           {/* Liste des boissons consommées */}
           {drinks.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="bg-white rounded-xl shadow-md p-6 h-48 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <h2 className="text-xl font-semibold mb-4">
                 Boissons consommées
               </h2>
@@ -566,21 +570,18 @@ function App() {
                     key={drink.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                   >
-                    <div className="flex items-center">
-                      <GlassWater className="w-5 h-5 text-blue-500 mr-2" />
-                      <div>
-                        <span className="font-medium">{drink.name}</span>
-                        <span className="text-sm text-gray-500 ml-2">
-                          {drink.amount}ml ({drink.alcoholPercentage}%)
-                        </span>
-                        <br />
-                        <span className="text-xs text-gray-500">
-                          {drink.timestamp.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
+                    <div className="flex items-center space-x-2">
+                      <GlassWater className="w-5 h-5 text-blue-500" />
+                      <span className="font-medium">
+                        {drink.name} - {drink.amount}ml (
+                        {drink.alcoholPercentage}%)
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {drink.timestamp.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
                     </div>
                     <button
                       onClick={() => removeDrink(drink.id)}
@@ -634,7 +635,7 @@ function App() {
                           hour: "2-digit",
                           minute: "2-digit",
                         })
-                      : "...";
+                      : "Calcul en cours...";
                   })()}
                 </p>
               )}
