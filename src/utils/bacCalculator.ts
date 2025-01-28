@@ -15,12 +15,18 @@ export function calculateBAC(
     const drinkTime = new Date(drink.timestamp);
     const hoursSinceDrink =
       (now.getTime() - drinkTime.getTime()) / (1000 * 60 * 60);
-    const alcoholGrams =
-      ((drink.amount * drink.alcoholPercentage) / 100) * 0.789; // Densité de l'alcool
-    const eliminatedAlcohol = hoursSinceDrink * 0.015;
 
+    // Grammes d'alcool pur
+    const alcoholGrams =
+      ((drink.amount * drink.alcoholPercentage) / 100) * 0.789;
+
+    // Taux d'élimination (correction ici : 0.15 au lieu de 0.015)
+    const eliminatedAlcohol = hoursSinceDrink * 0.15;
+
+    // BAC résiduel de cette boisson
     const remainingBACFromDrink =
       alcoholGrams / (weight * r) - eliminatedAlcohol;
+
     totalAlcohol += Math.max(0, remainingBACFromDrink);
   });
 

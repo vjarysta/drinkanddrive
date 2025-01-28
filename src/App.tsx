@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   History,
   RotateCcw,
-  // Cocktail,
   Martini,
 } from "lucide-react";
 import { DrinkInfo, UserInfo, BACResult, SavedDrink } from "./types";
@@ -123,21 +122,43 @@ function App() {
     localStorage.setItem("savedDrinks", JSON.stringify(savedDrinks));
   }, [savedDrinks]);
 
-  // Recalcule le BAC à chaque fois qu'on modifie la liste de boissons ou l'utilisateur
+  /**
+   * Mise à jour automatique du BAC et de la timeline toutes les secondes.
+   * Si le BAC retombe à 0, on efface l'historique de boissons.
+   */
   useEffect(() => {
-    if (drinks.length > 0) {
-      const result = calculateBAC(drinks, userInfo);
-      setResult(result);
-      setTimeline(generateBACTimeline(drinks, userInfo));
-    } else {
-      setResult(null);
-      setTimeline([]);
-    }
+    const updateBAC = () => {
+      if (drinks.length > 0) {
+        const currentResult = calculateBAC(drinks, userInfo);
+        setResult(currentResult);
+
+        const newTimeline = generateBACTimeline(drinks, userInfo);
+        setTimeline(newTimeline);
+
+        // Si le taux retombe à 0, on supprime l'historique des boissons consommées
+        if (currentResult.bac <= 0) {
+          setDrinks([]);
+          setResult(null);
+          setTimeline([]);
+        }
+      } else {
+        setResult(null);
+        setTimeline([]);
+      }
+    };
+
+    // Mise à jour initiale
+    updateBAC();
+
+    // Rafraîchissement chaque seconde
+    const interval = setInterval(updateBAC, 1000);
+    return () => clearInterval(interval);
   }, [drinks, userInfo]);
 
   /**
-   * Pré-remplit le formulaire avec une boisson standard.
-   * Ne l'ajoute pas directement à la liste.
+   * Pré-remplit le formulaire avec une boisson standard,
+   * en décalant l'heure de 30min après la dernière boisson
+   * UNIQUEMENT si la dernière boisson a été prise il y a moins de 24h.
    */
   const prefillDrinkForm = (drinkId: string) => {
     const found = standardDrinks.find((d) => d.id === drinkId);
@@ -149,19 +170,53 @@ function App() {
       alcoholPercentage: String(found.alcoholPercentage),
     });
 
-    // Met l'heure sélectionnée à 30 minutes après la dernière boisson
     const lastDrink = drinks[drinks.length - 1];
-    let newTime;
+    let newTime: Date;
 
     if (lastDrink) {
       const lastTime = new Date(lastDrink.timestamp);
-      newTime = new Date(lastTime.getTime() + 30 * 60 * 1000);
+      const diff = Date.now() - lastTime.getTime();
+      if (diff < 24 * 60 * 60 * 1000) {
+        newTime = new Date(lastTime.getTime() + 30 * 60 * 1000);
+      } else {
+        newTime = new Date();
+      }
     } else {
       newTime = new Date();
     }
 
     const roundedTime = roundToNearest15Minutes(newTime);
     setSelectedTime(roundedTime);
+  };
+
+  /**
+   * Quand on ajoute une boisson depuis la liste 'savedDrinks',
+   * même logique pour l'heure par défaut (décalage 30min si < 24h).
+   */
+  const addSavedDrink = (drink: SavedDrink) => {
+    const lastDrink = drinks[drinks.length - 1];
+    let newTime: Date;
+
+    if (lastDrink) {
+      const lastTime = new Date(lastDrink.timestamp);
+      const diff = Date.now() - lastTime.getTime();
+      if (diff < 24 * 60 * 60 * 1000) {
+        newTime = new Date(lastTime.getTime() + 30 * 60 * 1000);
+      } else {
+        newTime = new Date();
+      }
+    } else {
+      newTime = new Date();
+    }
+
+    const roundedTime = roundToNearest15Minutes(newTime);
+    setSelectedTime(roundedTime);
+
+    setNewDrink({
+      name: drink.name,
+      amount: drink.amount.toString(),
+      alcoholPercentage: drink.alcoholPercentage.toString(),
+    });
   };
 
   /**
@@ -172,7 +227,7 @@ function App() {
     if (Number(newDrink.amount) > 0 && Number(newDrink.alcoholPercentage) > 0) {
       const timestamp = normalizeTime(selectedTime.hours, selectedTime.minutes);
 
-      // On crée un objet pour l'historique (si on veut le sauvegarder)
+      // On crée un objet pour l'historique
       const drinkToSave: SavedDrink = {
         id: Date.now().toString(),
         name: newDrink.name || `Boisson ${newDrink.alcoholPercentage}%`,
@@ -188,7 +243,7 @@ function App() {
           drink.alcoholPercentage === drinkToSave.alcoholPercentage
       );
 
-      // Si ce n'est pas un duplicata, on ajoute la boisson dans les savedDrinks
+      // Si ce n'est pas un duplicata, on l'ajoute dans les savedDrinks
       if (!isDuplicate) {
         setSavedDrinks((prev) => [...prev, drinkToSave]);
       }
@@ -210,34 +265,19 @@ function App() {
         alcoholPercentage: "",
       });
 
-      // Met l'heure sélectionnée à 30 minutes après la dernière boisson
-      const newTime = new Date(timestamp.getTime() + 30 * 60 * 1000);
-      setSelectedTime(roundToNearest15Minutes(newTime));
+      // On recalcule l'heure par défaut pour la prochaine boisson
+      // en se basant sur la boisson qu'on vient d'ajouter,
+      // uniquement si elle est de moins de 24h
+      const lastDrinkTime = new Date(timestamp);
+      let nextTime: Date;
+      const diff = Date.now() - lastDrinkTime.getTime();
+      if (diff < 24 * 60 * 60 * 1000) {
+        nextTime = new Date(lastDrinkTime.getTime() + 30 * 60 * 1000);
+      } else {
+        nextTime = new Date();
+      }
+      setSelectedTime(roundToNearest15Minutes(nextTime));
     }
-  };
-
-  /**
-   * Quand on ajoute une boisson depuis le 'savedDrinks'
-   * on pré-remplit le formulaire avec un décalage de 30 min par rapport à la dernière boisson consommée.
-   */
-  const addSavedDrink = (drink: SavedDrink) => {
-    const lastDrink = drinks[drinks.length - 1];
-    let newTime;
-
-    if (lastDrink) {
-      const lastTime = new Date(lastDrink.timestamp);
-      newTime = new Date(lastTime.getTime() + 30 * 60 * 1000);
-    } else {
-      newTime = new Date();
-    }
-
-    const roundedTime = roundToNearest15Minutes(newTime);
-    setSelectedTime(roundedTime);
-    setNewDrink({
-      name: drink.name,
-      amount: drink.amount.toString(),
-      alcoholPercentage: drink.alcoholPercentage.toString(),
-    });
   };
 
   /**
@@ -275,14 +315,14 @@ function App() {
         alcoholPercentage: "",
       });
       setResult(null);
+      setTimeline([]);
       localStorage.clear();
     }
   };
 
-  const getTimeBelowLimit = (timeline: { time: Date; bac: number }[]) => {
-    const limit = 0.5;
-    const belowLimitEntry = timeline.find((entry) => entry.bac < limit);
-    return belowLimitEntry ? belowLimitEntry.time : null;
+  // Trouve la première date dans la timeline où le BAC tombe à 0
+  const getTimeAtZero = (data: { time: Date; bac: number }[]): Date | null => {
+    return data.find((point) => point.bac === 0)?.time || null;
   };
 
   const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -582,13 +622,20 @@ function App() {
                 </h2>
               </div>
               <p className="text-gray-700">{result.message}</p>
+
+              {/* Affiche l'heure à laquelle l'alcoolémie retombera à 0 */}
               {timeline.length > 0 && (
                 <p className="text-gray-700 mt-2">
-                  Vous serez en-dessous de 0.5g/L à {/* @TODO: Fix that */}
-                  {getTimeBelowLimit(timeline)?.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  Vous serez à 0g/L à{" "}
+                  {(() => {
+                    const zeroTime = getTimeAtZero(timeline);
+                    return zeroTime
+                      ? zeroTime.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "...";
+                  })()}
                 </p>
               )}
             </div>

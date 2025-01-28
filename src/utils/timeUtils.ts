@@ -33,15 +33,15 @@ export function normalizeTime(hours: number, minutes: number): Date {
   const selectedTime = new Date(now);
   selectedTime.setHours(hours, minutes, 0, 0);
 
-  // If the selected time is in the future or more than 24 hours in the past,
-  // adjust the day accordingly
+  // Si l'heure sélectionnée est dans le futur ou à plus de 24h dans le passé,
+  // on ajuste le jour en conséquence
   if (selectedTime > now) {
     selectedTime.setDate(selectedTime.getDate() - 1);
   } else if (now.getTime() - selectedTime.getTime() > 24 * 60 * 60 * 1000) {
     selectedTime.setDate(selectedTime.getDate() + 1);
   }
 
-  // If the time is before 8 AM, assume it's from the previous day
+  // Si l'heure est avant 8h du matin, on suppose que c'était la veille
   if (selectedTime.getHours() < 8) {
     selectedTime.setDate(selectedTime.getDate() - 1);
   }
@@ -49,18 +49,26 @@ export function normalizeTime(hours: number, minutes: number): Date {
   return selectedTime;
 }
 
+/**
+ * Génére une timeline jusqu'à 48h en arrière + élimination progressive
+ * avec un pas de 5 minutes, pour avoir plus de points et un affichage plus précis.
+ */
 export function generateBACTimeline(
   drinks: any[],
   userInfo: any,
-  hours = 24
+  hours = 48
 ): { time: Date; bac: number }[] {
   const now = new Date();
   const startTime = new Date(now.getTime() - hours * 60 * 60 * 1000);
   const timeline: { time: Date; bac: number }[] = [];
 
-  // Generate points every 15 minutes
-  for (let i = 0; i <= hours * 4; i++) {
-    const time = new Date(startTime.getTime() + i * 15 * 60 * 1000);
+  // On calcule toutes les 5 minutes
+  const stepMinutes = 5;
+  const totalSteps = (hours * 60) / stepMinutes; // ex: 48h => 576 points
+
+  for (let i = 0; i <= totalSteps; i++) {
+    const time = new Date(startTime.getTime() + i * stepMinutes * 60 * 1000);
+
     let totalBAC = 0;
 
     drinks.forEach((drink) => {
@@ -68,12 +76,21 @@ export function generateBACTimeline(
       if (drinkTime <= time) {
         const hoursSinceDrink =
           (time.getTime() - drinkTime.getTime()) / (1000 * 60 * 60);
+
+        // Grammes d'alcool pur
         const alcoholGrams =
           ((drink.amount * drink.alcoholPercentage) / 100) * 0.789;
+
+        // Facteur de diffusion
         const r = userInfo.gender === "male" ? 0.68 : 0.55;
+
+        // Taux d'élimination horaire
         const eliminatedAlcohol = hoursSinceDrink * 0.015;
+
+        // BAC résiduel de cette boisson
         const remainingBACFromDrink =
           alcoholGrams / (userInfo.weight * r) - eliminatedAlcohol;
+
         totalBAC += Math.max(0, remainingBACFromDrink);
       }
     });
