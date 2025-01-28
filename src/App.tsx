@@ -84,8 +84,8 @@ function App() {
       id: "beer",
       label: "Bière",
       icon: <Beer className="w-8 h-8 text-amber-500 mb-2" />,
-      amount: 250,
-      alcoholPercentage: 5,
+      amount: 250, // Revenu à la configuration initiale
+      alcoholPercentage: 5, // Revenu à la configuration initiale
     },
     {
       id: "wine",
@@ -136,6 +136,12 @@ function App() {
    */
   useEffect(() => {
     const updateBAC = () => {
+      // Supprimer les boissons consommées depuis plus de 24 heures
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      setDrinks((prevDrinks) =>
+        prevDrinks.filter((drink) => drink.timestamp >= twentyFourHoursAgo)
+      );
+
       if (drinks.length > 0) {
         const currentResult = calculateBAC(drinks, userInfo);
         setResult(currentResult);
@@ -329,26 +335,23 @@ function App() {
   };
 
   /**
-   * Trouve les premières dates dans la timeline où le BAC tombe à 0.5g/L, 0.2g/L et 0g/L
+   * Trouve l'heure à laquelle le BAC atteint un seuil donné
+   * en commençant l'itération à partir du premier moment où BAC > 0
    */
-  const getTimesAtThresholds = (
+  const getTimeAt = (
+    threshold: number,
     data: { time: Date; bac: number }[]
-  ): { [key: string]: Date | null } => {
-    const thresholds = [0.5, 0.2, 0];
-    const times: { [key: string]: Date | null } = {
-      "0.5": null,
-      "0.2": null,
-      "0": null,
-    };
-    thresholds.forEach((threshold) => {
-      for (let i = 0; i < data.length; i++) {
-        if (data[i].bac <= threshold) {
-          times[threshold.toString()] = data[i].time;
-          break;
-        }
+  ): Date | null => {
+    let started = false;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].bac > 0) {
+        started = true;
       }
-    });
-    return times;
+      if (started && data[i].bac <= threshold) {
+        return data[i].time;
+      }
+    }
+    return null;
   };
 
   const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -546,7 +549,7 @@ function App() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {/* Boissons sauvegardées */}
           {savedDrinks.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-6 h-64 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="bg-white rounded-xl shadow-md p-6 h-80 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <div className="flex items-center mb-4">
                 <History className="w-6 h-6 text-blue-500 mr-2" />
                 <h2 className="text-xl font-semibold">Boissons sauvegardées</h2>
@@ -586,7 +589,7 @@ function App() {
 
           {/* Liste des boissons consommées */}
           {drinks.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-6 h-64 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="bg-white rounded-xl shadow-md p-6 h-80 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <h2 className="text-xl font-semibold mb-4">
                 Boissons consommées
               </h2>
@@ -654,41 +657,28 @@ function App() {
                   : result.message}
               </p>
 
-              {/* Affiche les heures auxquelles le BAC atteint 0.5g/L, 0.2g/L et 0g/L */}
+              {/* Affiche une seule phrase selon le niveau de BAC */}
               {timeline.length > 0 && (
-                <div className="text-gray-700 mt-2 space-y-1">
+                <div className="text-gray-700 mt-2">
                   {(() => {
-                    const times = getTimesAtThresholds(timeline);
+                    const display = getTimeAt(
+                      result.bac >= 0.5 ? 0.5 : result.bac >= 0.2 ? 0.2 : 0,
+                      timeline
+                    );
                     return (
-                      <>
-                        <p>
-                          Vous serez à 0.5g/L à{" "}
-                          {times["0.5"]
-                            ? times["0.5"].toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "Calcul en cours..."}
-                        </p>
-                        <p>
-                          Vous serez à 0.2g/L à{" "}
-                          {times["0.2"]
-                            ? times["0.2"].toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "Calcul en cours..."}
-                        </p>
-                        <p>
-                          Vous serez à 0g/L à{" "}
-                          {times["0"]
-                            ? times["0"].toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "Calcul en cours..."}
-                        </p>
-                      </>
+                      <p>
+                        {`result`.bac < 0.2
+                          ? "Vous serez à 0g/L à"
+                          : result.bac < 0.5
+                          ? "Vous serez à 0.2g/L à"
+                          : "Vous serez à 0.5g/L à"}{" "}
+                        {display
+                          ? display.toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "Calcul en cours..."}
+                      </p>
                     );
                   })()}
                 </div>
