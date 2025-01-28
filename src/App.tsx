@@ -84,8 +84,8 @@ function App() {
       id: "beer",
       label: "Bière",
       icon: <Beer className="w-8 h-8 text-amber-500 mb-2" />,
-      amount: 500, // Mis à jour selon l'exemple de l'utilisateur
-      alcoholPercentage: 7, // Mis à jour selon l'exemple de l'utilisateur
+      amount: 250,
+      alcoholPercentage: 5,
     },
     {
       id: "wine",
@@ -328,18 +328,27 @@ function App() {
     }
   };
 
-  // Trouve la première date dans la timeline où le BAC tombe à 0
-  const getTimeAtZero = (data: { time: Date; bac: number }[]): Date | null => {
-    let started = false;
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].bac > 0) {
-        started = true;
+  /**
+   * Trouve les premières dates dans la timeline où le BAC tombe à 0.5g/L, 0.2g/L et 0g/L
+   */
+  const getTimesAtThresholds = (
+    data: { time: Date; bac: number }[]
+  ): { [key: string]: Date | null } => {
+    const thresholds = [0.5, 0.2, 0];
+    const times: { [key: string]: Date | null } = {
+      "0.5": null,
+      "0.2": null,
+      "0": null,
+    };
+    thresholds.forEach((threshold) => {
+      for (let i = 0; i < data.length; i++) {
+        if (data[i].bac <= threshold) {
+          times[threshold.toString()] = data[i].time;
+          break;
+        }
       }
-      if (started && data[i].bac <= 0) {
-        return data[i].time;
-      }
-    }
-    return null;
+    });
+    return times;
   };
 
   const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -639,22 +648,50 @@ function App() {
                   Taux d'alcool : {result.bac}g/L
                 </h2>
               </div>
-              <p className="text-gray-700">{result.message}</p>
+              <p className="text-gray-700">
+                {result.bac > 0.8
+                  ? "NE CONDUISEZ PAS. Votre taux est au-dessus de la limite légale. Appelez un taxi."
+                  : result.message}
+              </p>
 
-              {/* Affiche l'heure à laquelle l'alcoolémie retombera à 0 */}
+              {/* Affiche les heures auxquelles le BAC atteint 0.5g/L, 0.2g/L et 0g/L */}
               {timeline.length > 0 && (
-                <p className="text-gray-700 mt-2">
-                  Vous serez à 0g/L à{" "}
+                <div className="text-gray-700 mt-2 space-y-1">
                   {(() => {
-                    const zeroTime = getTimeAtZero(timeline);
-                    return zeroTime
-                      ? zeroTime.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "Calcul en cours...";
+                    const times = getTimesAtThresholds(timeline);
+                    return (
+                      <>
+                        <p>
+                          Vous serez à 0.5g/L à{" "}
+                          {times["0.5"]
+                            ? times["0.5"].toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "Calcul en cours..."}
+                        </p>
+                        <p>
+                          Vous serez à 0.2g/L à{" "}
+                          {times["0.2"]
+                            ? times["0.2"].toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "Calcul en cours..."}
+                        </p>
+                        <p>
+                          Vous serez à 0g/L à{" "}
+                          {times["0"]
+                            ? times["0"].toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "Calcul en cours..."}
+                        </p>
+                      </>
+                    );
                   })()}
-                </p>
+                </div>
               )}
             </div>
 
