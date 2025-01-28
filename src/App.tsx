@@ -1,5 +1,5 @@
 /* File: src/App.tsx */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Beer,
   Wine,
@@ -33,23 +33,21 @@ function App() {
         };
   });
 
-  const [drinks, setDrinks] = useState<DrinkInfo[]>(
-    (() => {
-      const saved = localStorage.getItem("drinks");
-      if (saved) {
-        const parsedDrinks = JSON.parse(saved).map((drink: any) => ({
-          ...drink,
-          timestamp: new Date(drink.timestamp),
-        }));
-        // Filtrer les boissons consommées il y a moins de 24 heures
-        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        return parsedDrinks.filter(
-          (drink: DrinkInfo) => drink.timestamp >= twentyFourHoursAgo
-        );
-      }
-      return [];
-    })()
-  );
+  const [drinks, setDrinks] = useState<DrinkInfo[]>(() => {
+    const saved = localStorage.getItem("drinks");
+    if (saved) {
+      const parsedDrinks = JSON.parse(saved).map((drink: any) => ({
+        ...drink,
+        timestamp: new Date(drink.timestamp),
+      }));
+      // Filtrer les boissons consommées il y a moins de 24 heures
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      return parsedDrinks.filter(
+        (drink: DrinkInfo) => drink.timestamp >= twentyFourHoursAgo
+      );
+    }
+    return [];
+  });
 
   const [result, setResult] = useState<BACResult | null>(null);
 
@@ -117,6 +115,19 @@ function App() {
     },
   ];
 
+  // Références pour éviter les dépendances inutiles dans useEffect
+  const drinksRef = useRef<DrinkInfo[]>(drinks);
+  const userInfoRef = useRef<UserInfo>(userInfo);
+
+  // Met à jour les références chaque fois que les états changent
+  useEffect(() => {
+    drinksRef.current = drinks;
+  }, [drinks]);
+
+  useEffect(() => {
+    userInfoRef.current = userInfo;
+  }, [userInfo]);
+
   // Sauvegarde dans localStorage à chaque fois que userInfo, drinks ou savedDrinks changent
   useEffect(() => {
     localStorage.setItem("userInfo", JSON.stringify(userInfo));
@@ -142,11 +153,16 @@ function App() {
         prevDrinks.filter((drink) => drink.timestamp >= twentyFourHoursAgo)
       );
 
-      if (drinks.length > 0) {
-        const currentResult = calculateBAC(drinks, userInfo);
+      const currentDrinks = drinksRef.current;
+
+      if (currentDrinks.length > 0) {
+        const currentResult = calculateBAC(currentDrinks, userInfoRef.current);
         setResult(currentResult);
 
-        const newTimeline = generateBACTimeline(drinks, userInfo);
+        const newTimeline = generateBACTimeline(
+          currentDrinks,
+          userInfoRef.current
+        );
         setTimeline(newTimeline);
 
         // Si le taux retombe à 0, on supprime l'historique des boissons consommées
@@ -167,7 +183,7 @@ function App() {
     // Rafraîchissement chaque seconde
     const interval = setInterval(updateBAC, 1000);
     return () => clearInterval(interval);
-  }, [drinks, userInfo]);
+  }, []); // Pas de dépendances pour éviter les boucles infinies
 
   /**
    * Pré-remplit le formulaire avec une boisson standard,
@@ -208,7 +224,7 @@ function App() {
    * même logique pour l'heure par défaut (décalage 30min si < 24h).
    */
   const addSavedDrink = (drink: SavedDrink) => {
-    const lastDrink = drinks[drinks.length - 1];
+    const lastDrink = drinksRef.current[drinksRef.current.length - 1];
     let newTime: Date;
 
     if (lastDrink) {
@@ -257,9 +273,9 @@ function App() {
           drink.alcoholPercentage === drinkToSave.alcoholPercentage
       );
 
-      // Si ce n'est pas un duplicata, on l'ajoute dans les savedDrinks
+      // Si ce n'est pas un duplicata, on l'ajoute dans les savedDrinks (au début)
       if (!isDuplicate) {
-        setSavedDrinks((prev) => [...prev, drinkToSave]);
+        setSavedDrinks((prev) => [drinkToSave, ...prev]);
       }
 
       // On ajoute aussi cette boisson à la liste "drinks" consommées
@@ -270,7 +286,7 @@ function App() {
         alcoholPercentage: drinkToSave.alcoholPercentage,
         timestamp,
       };
-      setDrinks((prev) => [...prev, drinkForList]);
+      setDrinks((prev) => [drinkForList, ...prev]); // Ajouter au début pour affichage inverse
 
       // On réinitialise le formulaire
       setNewDrink({
@@ -298,14 +314,14 @@ function App() {
    * Supprime une boisson de la liste 'drinks'
    */
   const removeDrink = (id: string) => {
-    setDrinks(drinks.filter((drink) => drink.id !== id));
+    setDrinks((prev) => prev.filter((drink) => drink.id !== id));
   };
 
   /**
    * Supprime une boisson du 'savedDrinks'
    */
   const removeSavedDrink = (id: string) => {
-    setSavedDrinks(savedDrinks.filter((drink) => drink.id !== id));
+    setSavedDrinks((prev) => prev.filter((drink) => drink.id !== id));
   };
 
   /**
@@ -352,6 +368,31 @@ function App() {
       }
     }
     return null;
+  };
+
+  /**
+   * Détermine quelle phrase afficher en fonction du niveau actuel de BAC
+   */
+  const getDisplayTime = (
+    currentBAC: number,
+    data: { time: Date; bac: number }[]
+  ): { label: string; time: Date | null } => {
+    if (currentBAC < 0.2) {
+      return {
+        label: "Vous serez à 0g/L à",
+        time: getTimeAt(0, data),
+      };
+    } else if (currentBAC < 0.5) {
+      return {
+        label: "Vous serez à 0.2g/L à",
+        time: getTimeAt(0.2, data),
+      };
+    } else {
+      return {
+        label: "Vous serez à 0.5g/L à",
+        time: getTimeAt(0.5, data),
+      };
+    }
   };
 
   const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -454,7 +495,7 @@ function App() {
                     setNewDrink((prev) => ({ ...prev, amount: e.target.value }))
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="500"
+                  placeholder="250"
                 />
               </div>
               <div>
@@ -471,7 +512,7 @@ function App() {
                     }))
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="7"
+                  placeholder="5"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -661,19 +702,12 @@ function App() {
               {timeline.length > 0 && (
                 <div className="text-gray-700 mt-2">
                   {(() => {
-                    const display = getTimeAt(
-                      result.bac >= 0.5 ? 0.5 : result.bac >= 0.2 ? 0.2 : 0,
-                      timeline
-                    );
+                    const display = getDisplayTime(result.bac, timeline);
                     return (
                       <p>
-                        {`result`.bac < 0.2
-                          ? "Vous serez à 0g/L à"
-                          : result.bac < 0.5
-                          ? "Vous serez à 0.2g/L à"
-                          : "Vous serez à 0.5g/L à"}{" "}
-                        {display
-                          ? display.toLocaleTimeString([], {
+                        {display.label}{" "}
+                        {display.time
+                          ? display.time.toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
                             })
@@ -685,7 +719,9 @@ function App() {
               )}
             </div>
 
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="bg-white rounded-xl shadow-md p-6 sm:p-0">
+              {" "}
+              {/* Suppression du padding sur mobile */}
               <h2 className="text-xl font-semibold mb-4">
                 Évolution du taux d'alcoolémie
               </h2>

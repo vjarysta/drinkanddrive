@@ -8,12 +8,12 @@ export interface DrinkInfo {
 
 export interface UserInfo {
   weight: number;
-  gender: 'male' | 'female';
+  gender: "male" | "female";
 }
 
 export interface BACResult {
   bac: number;
-  status: 'safe' | 'caution' | 'danger';
+  status: "safe" | "caution" | "danger";
   message: string;
   timestamp: Date;
 }

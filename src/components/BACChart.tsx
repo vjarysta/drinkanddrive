@@ -44,15 +44,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function BACChart({ data }: BACChartProps) {
+  const filteredData = data.filter((entry) => entry.bac > 0);
+
   return (
     <div className="w-full h-[300px]">
       <ResponsiveContainer>
         <LineChart
-          data={data.map((entry) => ({
+          data={filteredData.map((entry) => ({
             ...entry,
             timestamp: entry.time.getTime(),
           }))}
-          margin={{ top: 5, right: 40, bottom: 5, left: 0 }} // Augmentation du right margin pour afficher le label "0.5"
+          margin={{ top: 5, right: 40, bottom: 5, left: 0 }}
         >
           <CartesianGrid strokeDasharray="3 3" className="opacity-50" />
           <XAxis
@@ -65,12 +67,11 @@ export function BACChart({ data }: BACChartProps) {
           />
           <YAxis domain={[0, "auto"]} />
           <Tooltip content={<CustomTooltip />} />
-          {/* Limite légale à 0.5 g/L */}
           <ReferenceLine
             y={0.5}
             stroke="#EF4444"
             strokeDasharray="3 3"
-            label={{ value: "0.5", position: "right", offset: 10 }} // Décalage pour éviter le découpage
+            label={{ value: "0.5", position: "right", offset: 10 }}
           />
           <Line
             type="monotone"

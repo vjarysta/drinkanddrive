@@ -62,7 +62,7 @@ export function generateBACTimeline(
 ): { time: Date; bac: number }[] {
   const now = new Date();
   const startTime = new Date(now.getTime() - pastHours * 60 * 60 * 1000);
-  const endTime = new Date(now.getTime() + futureHours * 60 * 60 * 1000);
+  // const endTime = new Date(now.getTime() + futureHours * 60 * 60 * 1000);
   const timeline: { time: Date; bac: number }[] = [];
 
   const totalSteps = ((pastHours + futureHours) * 60) / stepMinutes;
