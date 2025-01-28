@@ -1,3 +1,4 @@
+/* File: src/utils/bacCalculator.tsx */
 import { DrinkInfo, UserInfo, BACResult } from "../types";
 
 export function calculateBAC(
