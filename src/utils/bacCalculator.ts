@@ -13,6 +13,12 @@ export function calculateBAC(
 
   drinks.forEach((drink) => {
     const drinkTime = new Date(drink.timestamp);
+
+    // On ignore les boissons qui seraient enregistrées dans le futur.
+    if (drinkTime > now) {
+      return;
+    }
+
     const hoursSinceDrink =
       (now.getTime() - drinkTime.getTime()) / (1000 * 60 * 60);
 
