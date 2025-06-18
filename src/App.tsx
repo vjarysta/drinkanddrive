@@ -207,7 +207,8 @@ function App() {
       const lastTime = new Date(lastDrink.timestamp);
       const diff = Date.now() - lastTime.getTime();
       if (diff < 24 * 60 * 60 * 1000) {
-        newTime = new Date(lastTime.getTime() + 30 * 60 * 1000);
+        const proposedTime = new Date(lastTime.getTime() + 30 * 60 * 1000);
+        newTime = proposedTime > new Date() ? new Date() : proposedTime;
       } else {
         newTime = new Date();
       }
@@ -231,7 +232,8 @@ function App() {
       const lastTime = new Date(lastDrink.timestamp);
       const diff = Date.now() - lastTime.getTime();
       if (diff < 24 * 60 * 60 * 1000) {
-        newTime = new Date(lastTime.getTime() + 30 * 60 * 1000);
+        const proposedTime = new Date(lastTime.getTime() + 30 * 60 * 1000);
+        newTime = proposedTime > new Date() ? new Date() : proposedTime;
       } else {
         newTime = new Date();
       }
@@ -302,7 +304,8 @@ function App() {
       let nextTime: Date;
       const diff = Date.now() - lastDrinkTime.getTime();
       if (diff < 24 * 60 * 60 * 1000) {
-        nextTime = new Date(lastDrinkTime.getTime() + 30 * 60 * 1000);
+        const proposedTime = new Date(lastDrinkTime.getTime() + 30 * 60 * 1000);
+        nextTime = proposedTime > new Date() ? new Date() : proposedTime;
       } else {
         nextTime = new Date();
       }

@@ -30,23 +30,35 @@ export function generateTimeOptions(): {
 
 export function normalizeTime(hours: number, minutes: number): Date {
   const now = new Date();
-  const selectedTime = new Date(now);
-  selectedTime.setHours(hours, minutes, 0, 0);
+  const selectedDate = new Date();
+  selectedDate.setHours(hours, minutes, 0, 0);
 
-  // Si l'heure sélectionnée est dans le futur ou à plus de 24h dans le passé,
-  // on ajuste le jour en conséquence
-  if (selectedTime > now) {
-    selectedTime.setDate(selectedTime.getDate() - 1);
-  } else if (now.getTime() - selectedTime.getTime() > 24 * 60 * 60 * 1000) {
-    selectedTime.setDate(selectedTime.getDate() + 1);
+  // Gère le passage à minuit : si on est en fin de soirée et qu'on
+  // sélectionne une heure tôt le matin, on considère que c'est pour le lendemain.
+  // Ex: il est 23h30, on sélectionne 00h30 -> on veut le 00h30 dans 1h, pas celui d'il y a 23h.
+  if (now.getHours() >= 21 && hours <= 3) {
+    const potentialNextDay = new Date(selectedDate);
+    potentialNextDay.setDate(potentialNextDay.getDate() + 1);
+    // Si cette heure est dans un futur proche (moins de 3h), on la prend.
+    if (
+      potentialNextDay > now &&
+      potentialNextDay.getTime() - now.getTime() < 3 * 60 * 60 * 1000
+    ) {
+      return potentialNextDay;
+    }
   }
 
-  // Si l'heure est avant 8h du matin, on suppose que c'était la veille
-  if (selectedTime.getHours() < 8) {
-    selectedTime.setDate(selectedTime.getDate() - 1);
+  // Si l'heure sélectionnée est dans le futur (hors cas de minuit ci-dessus)
+  if (selectedDate > now) {
+    // Si c'est dans plus de 3h, on suppose que c'était hier.
+    if (selectedDate.getTime() - now.getTime() > 3 * 60 * 60 * 1000) {
+      selectedDate.setDate(selectedDate.getDate() - 1);
+    }
+    // Sinon, c'est dans moins de 3h, on garde la date d'aujourd'hui.
   }
 
-  return selectedTime;
+  // Pour les heures passées, on suppose que c'est aujourd'hui.
+  return selectedDate;
 }
 
 /**
