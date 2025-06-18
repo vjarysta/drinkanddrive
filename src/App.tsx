@@ -11,6 +11,8 @@ import {
   History,
   RotateCcw,
   Martini,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { DrinkInfo, UserInfo, BACResult, SavedDrink } from "./types";
 import { calculateBAC } from "./utils/bacCalculator";
@@ -23,6 +25,28 @@ import {
 import { BACChart } from "./components/BACChart";
 
 function App() {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    ) {
+      return "dark";
+    }
+    return "light";
+  });
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === "light" ? "dark" : "light");
+  };
+
   const [userInfo, setUserInfo] = useState<UserInfo>(() => {
     const saved = localStorage.getItem("userInfo");
     return saved
@@ -402,18 +426,30 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-      <div className="max-w-7xl mx-auto p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto p-6 relative">
+        <div className="absolute top-6 right-6">
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          >
+            {theme === "light" ? (
+              <Moon className="w-6 h-6" />
+            ) : (
+              <Sun className="w-6 h-6" />
+            )}
+          </button>
+        </div>
         <div className="text-center mb-8">
           <img
             src="logo.png"
             alt="Drink & Drive Logo"
             className="w-16 h-16 mx-auto mb-4"
           />
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
             Drink & Drive
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Calculez votre taux d'alcoolémie. Boire et conduire ? Oui, mais de
             manière responsable !
           </p>
@@ -421,15 +457,17 @@ function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Informations utilisateur */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <div className="flex items-center mb-4">
               <UserCircle2 className="w-6 h-6 text-blue-500 mr-2" />
-              <h2 className="text-xl font-semibold">Vos Informations</h2>
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
+                Vos Informations
+              </h2>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Poids (kg)
                 </label>
                 <input
@@ -441,18 +479,18 @@ function App() {
                       setUserInfo({ ...userInfo, weight: Number(value) });
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Genre
                 </label>
                 <select
                   value={userInfo.gender}
                   onChange={handleGenderChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                 >
                   <option value="male">Homme</option>
                   <option value="female">Femme</option>
@@ -463,11 +501,13 @@ function App() {
           </div>
 
           {/* Ajouter une boisson */}
-          <div className="bg-white rounded-xl shadow-md p-6 md:order-3 lg:order-2">
-            <h2 className="text-xl font-semibold mb-4">Ajouter une boisson</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 md:order-3 lg:order-2">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
+              Ajouter une boisson
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Nom (optionnel)
                 </label>
                 <input
@@ -476,12 +516,12 @@ function App() {
                   onChange={(e) =>
                     setNewDrink((prev) => ({ ...prev, name: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                   placeholder="Cuvée des Trolls"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Volume (ml)
                 </label>
                 <input
@@ -490,12 +530,12 @@ function App() {
                   onChange={(e) =>
                     setNewDrink((prev) => ({ ...prev, amount: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                   placeholder="250"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Degré d'alcool (%)
                 </label>
                 <input
@@ -507,13 +547,13 @@ function App() {
                       alcoholPercentage: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                   placeholder="7"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Heure
                   </label>
                   <select
@@ -524,7 +564,7 @@ function App() {
                         hours: Number(e.target.value),
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                   >
                     {timeOptions.hours.map((hour) => (
                       <option key={hour.value} value={hour.value}>
@@ -534,7 +574,7 @@ function App() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Minutes
                   </label>
                   <select
@@ -545,7 +585,7 @@ function App() {
                         minutes: Number(e.target.value),
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                   >
                     {timeOptions.minutes.map((minute) => (
                       <option key={minute.value} value={minute.value}>
@@ -565,17 +605,21 @@ function App() {
           </div>
 
           {/* Boissons standards (préremplir le formulaire) */}
-          <div className="bg-white rounded-xl shadow-md p-6 md:order-2 lg:order-3">
-            <h2 className="text-xl font-semibold mb-4">Boissons standards</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 md:order-2 lg:order-3">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
+              Boissons standards
+            </h2>
             <div className="grid grid-cols-2 gap-4">
               {standardDrinks.map((drink) => (
                 <button
                   key={drink.id}
                   onClick={() => prefillDrinkForm(drink.id)}
-                  className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors"
+                  className="flex flex-col items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   {drink.icon}
-                  <span className="text-sm">{drink.label}</span>
+                  <span className="text-sm text-gray-800 dark:text-gray-200">
+                    {drink.label}
+                  </span>
                 </button>
               ))}
             </div>
@@ -586,20 +630,22 @@ function App() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {/* Boissons sauvegardées */}
           {savedDrinks.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-6 h-80 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 h-80 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-700">
               <div className="flex items-center mb-4">
                 <History className="w-6 h-6 text-blue-500 mr-2" />
-                <h2 className="text-xl font-semibold">Boissons sauvegardées</h2>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
+                  Boissons sauvegardées
+                </h2>
               </div>
               <div className="space-y-3">
                 {savedDrinks.map((drink) => (
                   <div
                     key={drink.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                   >
                     <div className="flex items-center space-x-2">
                       <GlassWater className="w-5 h-5 text-blue-500" />
-                      <span className="font-medium">
+                      <span className="font-medium text-gray-800 dark:text-gray-200">
                         {drink.name} - {drink.amount}ml (
                         {drink.alcoholPercentage}%)
                       </span>
@@ -626,23 +672,23 @@ function App() {
 
           {/* Liste des boissons consommées */}
           {drinks.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-6 h-80 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              <h2 className="text-xl font-semibold mb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 h-80 overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-700">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
                 Boissons consommées
               </h2>
               <div className="space-y-3">
                 {drinks.map((drink) => (
                   <div
                     key={drink.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                   >
                     <div className="flex items-center space-x-2">
                       <GlassWater className="w-5 h-5 text-blue-500" />
-                      <span className="font-medium">
+                      <span className="font-medium text-gray-800 dark:text-gray-200">
                         {drink.name} - {drink.amount}ml (
                         {drink.alcoholPercentage}%)
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
                         {drink.timestamp.toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -666,7 +712,7 @@ function App() {
         {result && (
           <div className="mt-6 space-y-6">
             <div
-              className={`bg-white rounded-xl shadow-md p-6 border-l-4 ${
+              className={`bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border-l-4 ${
                 result.status === "safe"
                   ? "border-green-500"
                   : result.status === "caution"
@@ -684,14 +730,14 @@ function App() {
                       : "text-red-500"
                   }`}
                 />
-                <h2 className="text-xl font-semibold">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
                   Taux d'alcool : {result.bac}g/L
                 </h2>
               </div>
 
               {/* Affiche une seule phrase selon le niveau de BAC */}
               {timeline.length > 0 && (
-                <div className="text-lg font-bold text-gray-900">
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                   {(() => {
                     const display = getDisplayTime(result.bac, timeline);
                     return (
@@ -709,17 +755,17 @@ function App() {
                 </div>
               )}
 
-              <p className="text-gray-700 mt-2">
+              <p className="text-gray-700 dark:text-gray-300 mt-2">
                 {result.bac > 0.8
                   ? "NE CONDUISEZ PAS. Votre taux est au-dessus de la limite légale. Appelez un taxi."
                   : result.message}
               </p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-md p-6 sm:p-0">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 sm:p-0">
               {" "}
               {/* Suppression du padding sur mobile */}
-              <h2 className="text-xl font-semibold mb-4">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100 px-6 pt-6 sm:px-6 sm:pt-6">
                 Évolution du taux d'alcoolémie
               </h2>
               <BACChart data={timeline} />
@@ -727,7 +773,7 @@ function App() {
           </div>
         )}
 
-        <div className="text-center text-sm text-gray-500 mt-8">
+        <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
           <p>
             Ce calculateur fournit des estimations uniquement. De nombreux
             facteurs peuvent affecter votre taux d'alcoolémie.
@@ -738,7 +784,7 @@ function App() {
           </p>
           <button
             onClick={resetAll}
-            className="mt-4 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="mt-4 inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <RotateCcw className="w-4 h-4 mr-2" />
             Réinitialiser
