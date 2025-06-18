@@ -501,7 +501,7 @@ function App() {
           </div>
 
           {/* Ajouter une boisson */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 md:order-3 lg:order-2 transition-colors">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 sm:order-3 lg:order-2 transition-colors">
             <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100 transition-colors">
               Ajouter une boisson
             </h2>
@@ -605,7 +605,7 @@ function App() {
           </div>
 
           {/* Boissons standards (préremplir le formulaire) */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 md:order-2 lg:order-3 transition-colors">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 sm:order-2 lg:order-3 transition-colors">
             <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100 transition-colors">
               Boissons standards
             </h2>
