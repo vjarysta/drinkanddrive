@@ -106,13 +106,6 @@ function App() {
       amount: 200,
       alcoholPercentage: 12,
     },
-    {
-      id: "pastis",
-      label: "Pastis",
-      icon: <GlassWater className="w-8 h-8 text-yellow-400 mb-2" />,
-      amount: 25,
-      alcoholPercentage: 45,
-    },
   ];
 
   // Références pour éviter les dépendances inutiles dans useEffect
@@ -426,7 +419,7 @@ function App() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Informations utilisateur */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center mb-4">
@@ -470,7 +463,7 @@ function App() {
           </div>
 
           {/* Ajouter une boisson */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-6 md:order-3 lg:order-2">
             <h2 className="text-xl font-semibold mb-4">Ajouter une boisson</h2>
             <div className="space-y-4">
               <div>
@@ -572,9 +565,9 @@ function App() {
           </div>
 
           {/* Boissons standards (préremplir le formulaire) */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-6 md:order-2 lg:order-3">
             <h2 className="text-xl font-semibold mb-4">Boissons standards</h2>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {standardDrinks.map((drink) => (
                 <button
                   key={drink.id}
@@ -695,15 +688,10 @@ function App() {
                   Taux d'alcool : {result.bac}g/L
                 </h2>
               </div>
-              <p className="text-gray-700">
-                {result.bac > 0.8
-                  ? "NE CONDUISEZ PAS. Votre taux est au-dessus de la limite légale. Appelez un taxi."
-                  : result.message}
-              </p>
 
               {/* Affiche une seule phrase selon le niveau de BAC */}
               {timeline.length > 0 && (
-                <div className="text-gray-700 mt-2">
+                <div className="text-lg font-bold text-gray-900">
                   {(() => {
                     const display = getDisplayTime(result.bac, timeline);
                     return (
@@ -720,6 +708,12 @@ function App() {
                   })()}
                 </div>
               )}
+
+              <p className="text-gray-700 mt-2">
+                {result.bac > 0.8
+                  ? "NE CONDUISEZ PAS. Votre taux est au-dessus de la limite légale. Appelez un taxi."
+                  : result.message}
+              </p>
             </div>
 
             <div className="bg-white rounded-xl shadow-md p-6 sm:p-0">
